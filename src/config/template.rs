@@ -1,7 +1,10 @@
-use super::config::Config;
+use super::config::{Config, CoreConfig};
 
 pub fn config_template() -> Config {
     Config {
-        bot_token: String::from("YOUR_BOT_TOKEN"),
+        core_config: CoreConfig {
+            bot_token: "YOUR_BOT_TOKEN".to_string(),
+            chat_id: vec![1145141919810],
+        }
     }
 }

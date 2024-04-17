@@ -1,2 +1,2 @@
 pub mod config;
-mod template;
+pub mod template;

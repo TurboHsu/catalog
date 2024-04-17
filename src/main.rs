@@ -17,7 +17,7 @@ async fn main() {
     let opts: Opts = Opts::parse();
     pretty_env_logger::init();
 
-    let conf = config::config::load_config(opts.config);
+    let cfg = config::config::read(opts.config).unwrap();
 
-    bot::core::start_bot(conf.bot_token).await;
+    bot::core::start_bot(cfg.core_config).await;
 }
