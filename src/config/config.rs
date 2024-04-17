@@ -15,7 +15,7 @@ pub struct Config {
 #[derive(Serialize, Deserialize)]
 pub struct CoreConfig {
     pub bot_token: String,
-    pub chat_id: Vec<i64>,
+    pub chat_id: Vec<u64>,
 }
 
 pub fn read(path: String) -> Result<Config, Box<dyn Error>> {
