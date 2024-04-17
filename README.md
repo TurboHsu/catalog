@@ -1,3 +1,3 @@
-# CatAlog
+# CatALog
 
-A Telegram bot for logging cats.
+A personal Telegram bot for logging cats.
