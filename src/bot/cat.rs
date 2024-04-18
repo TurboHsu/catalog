@@ -19,6 +19,10 @@ pub async fn post_cat(b: Bot, msg: Message) -> ResponseResult<Message> {
 
                     let _ = super::net::download_file(&b, file_id).await;
 
+                    let _ = super::net::upload_oss(file_id).await;
+
+                    let _ = super::net::delete_file(file_id).await;
+
                     return b
                         .send_message(msg.chat.id, "Posted one cat pic!")
                         .reply_to_message_id(msg.id)
@@ -34,6 +38,10 @@ pub async fn post_cat(b: Bot, msg: Message) -> ResponseResult<Message> {
 
                     for file_id in &photos {
                         let _ = super::net::download_file(&b, file_id).await;
+
+                        let _ = super::net::upload_oss(file_id).await;
+
+                        let _ = super::net::delete_file(file_id).await;
                     }
 
                     return b

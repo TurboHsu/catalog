@@ -1,9 +1,9 @@
-use std::{collections::HashMap, sync::Arc};
-use tokio::sync::Mutex;
-use teloxide::{prelude::*, utils::command::BotCommands};
-use crate::config::config::CoreConfig;
 use super::cat;
+use crate::{config::config::CoreConfig, storage};
 use lazy_static::lazy_static;
+use std::{collections::HashMap, sync::Arc};
+use teloxide::{prelude::*, utils::command::BotCommands};
+use tokio::sync::Mutex;
 
 #[derive(BotCommands, Clone)]
 #[command(
@@ -21,9 +21,11 @@ enum Command {
 }
 
 lazy_static! {
-    pub static ref MEDIA_GROUP_RESOURCE: Arc<Mutex<HashMap<String, Vec<String>>>> = Arc::new(Mutex::new(HashMap::new()));
+    pub static ref MEDIA_GROUP_RESOURCE: Arc<Mutex<HashMap<String, Vec<String>>>> =
+        Arc::new(Mutex::new(HashMap::new()));
+    pub static ref STORAGE: Mutex<Box<dyn storage::file::ObjectStorage>> =
+        Mutex::new(Box::new(storage::file::Default::new()));
 }
-
 
 async fn handle_commands(b: Bot, msg: Message, cmd: Command) -> ResponseResult<()> {
     match cmd {
@@ -42,7 +44,7 @@ async fn handle_commands(b: Bot, msg: Message, cmd: Command) -> ResponseResult<(
     Ok(())
 }
 
-pub async fn start_bot(core_config: CoreConfig) {
+pub async fn start_bot(core_config: CoreConfig, storage: Box<dyn storage::file::ObjectStorage>) {
     log::info!("Starting CatALog bot...");
 
     let bot = Bot::new(core_config.bot_token);
@@ -52,6 +54,11 @@ pub async fn start_bot(core_config: CoreConfig) {
     *download_cache_dir = core_config.cache_dir.clone();
     drop(download_cache_dir);
 
+    // Put storage
+    let mut storage_ref = STORAGE.lock().await;
+    *storage_ref = storage;
+    drop(storage_ref);
+
     let handler = Update::filter_message()
         .branch(
             dptree::entry()
@@ -60,11 +67,17 @@ pub async fn start_bot(core_config: CoreConfig) {
                 })
                 .endpoint(|msg: Message, bot: Bot| async move {
                     log::debug!("Unauthorized user: {:?}", msg.from().unwrap().id.0);
-                    bot.send_message(
-                        msg.chat.id,
-                        "You do not have enough cat power to use this bot!",
-                    )
-                    .await?;
+                    // Detect for /id command
+                    if msg.text().unwrap().starts_with("/chatid") {
+                        bot.send_message(msg.chat.id, format!("Chat ID: {}", msg.chat.id))
+                            .await?;
+                    } else {
+                        bot.send_message(
+                            msg.chat.id,
+                            "You do not have enough cat power to use this bot!",
+                        )
+                        .await?;
+                    }
                     respond(())
                 }),
         )
@@ -75,7 +88,7 @@ pub async fn start_bot(core_config: CoreConfig) {
                         teloxide::types::MessageKind::Common(common) => match &common.media_kind {
                             teloxide::types::MediaKind::Photo(photo) => {
                                 if photo.media_group_id.is_some() {
-                                    return true
+                                    return true;
                                 }
                             }
                             _ => (),
@@ -112,6 +125,10 @@ async fn handle_group_media(msg: Message) -> ResponseResult<()> {
         .or_insert_with(Vec::new)
         .push(msg.photo().unwrap().last().unwrap().file.id.to_string());
 
-    log::debug!("received media group {} with photo {}.", msg.media_group_id().unwrap(), msg.photo().unwrap().first().unwrap().file.id);
+    log::debug!(
+        "received media group {} with photo {}.",
+        msg.media_group_id().unwrap(),
+        msg.photo().unwrap().first().unwrap().file.id
+    );
     Ok(())
 }

@@ -1,3 +1,4 @@
+use core::str;
 use std::error::Error;
 use serde::{Deserialize, Serialize};
 use std::io::Write;
@@ -10,6 +11,7 @@ use super::template::config_template;
 #[derive(Serialize, Deserialize)]
 pub struct Config {
     pub core_config: CoreConfig,
+    pub oss_config: OssConfig,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -17,6 +19,17 @@ pub struct CoreConfig {
     pub bot_token: String,
     pub chat_id: Vec<u64>,
     pub cache_dir: String,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct OssConfig {
+    pub provider: String,
+    pub configuration: OssConfigField,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct OssConfigField {
+    pub qiniu: crate::storage::qiniu::config::Config,
 }
 
 pub fn read(path: String) -> Result<Config, Box<dyn Error>> {

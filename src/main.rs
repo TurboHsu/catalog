@@ -1,5 +1,6 @@
 mod config;
 mod bot;
+mod storage;
 
 use clap::Parser;
 
@@ -18,6 +19,8 @@ async fn main() {
     pretty_env_logger::init();
 
     let cfg = config::config::read(opts.config).unwrap();
+    
+    let storage = storage::file::init_storage(cfg.oss_config);
 
-    bot::core::start_bot(cfg.core_config).await;
+    bot::core::start_bot(cfg.core_config, storage).await;
 }
