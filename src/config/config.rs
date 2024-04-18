@@ -19,6 +19,7 @@ pub struct CoreConfig {
     pub bot_token: String,
     pub chat_id: Vec<u64>,
     pub cache_dir: String,
+    pub metadata_path: String,
 }
 
 #[derive(Serialize, Deserialize)]

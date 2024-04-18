@@ -59,6 +59,9 @@ pub async fn start_bot(core_config: CoreConfig, storage: Box<dyn storage::file::
     *storage_ref = storage;
     drop(storage_ref);
 
+    // Init metadata
+    super::metadata::init_metadata(&core_config.metadata_path).await;
+
     let handler = Update::filter_message()
         .branch(
             dptree::entry()

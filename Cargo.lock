@@ -210,6 +210,7 @@ dependencies = [
  "pretty_env_logger",
  "qiniu-sdk",
  "serde",
+ "serde_json",
  "teloxide",
  "tokio",
  "toml",

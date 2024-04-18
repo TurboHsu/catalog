@@ -14,12 +14,18 @@ pub async fn post_cat(b: Bot, msg: Message) -> ResponseResult<Message> {
     match &replied_message.kind {
         teloxide::types::MessageKind::Common(common) => match &common.media_kind {
             teloxide::types::MediaKind::Photo(photo) => {
+                let default_caption = "".to_string();
+                let caption = photo.caption.as_ref().unwrap_or(&default_caption);
+
                 if photo.media_group_id.is_none() {
                     let file_id = &photo.photo.last().unwrap().file.id;
 
                     super::net::download_file(&b, file_id).await?;
                     super::net::upload_oss(file_id).await?;
                     super::net::delete_file(file_id).await?;
+                    
+                    super::metadata::insert_metadata(caption, vec![file_id.clone()]).await?;
+                    super::metadata::update_metadata().await?;
 
                     return b
                         .send_message(msg.chat.id, "Posted one cat pic!")
@@ -39,6 +45,9 @@ pub async fn post_cat(b: Bot, msg: Message) -> ResponseResult<Message> {
                         super::net::upload_oss(file_id).await?;
                         super::net::delete_file(file_id).await?;
                     }
+                    
+                    super::metadata::insert_metadata(caption, photos.clone()).await?;
+                    super::metadata::update_metadata().await?;
 
                     return b
                         .send_message(msg.chat.id, format!("Posted {} cat pics!", &photos.len()))
