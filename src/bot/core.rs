@@ -1,14 +1,16 @@
+use std::{collections::HashMap, sync::Arc};
+use tokio::sync::Mutex;
 use teloxide::{prelude::*, utils::command::BotCommands};
-
 use crate::config::config::CoreConfig;
-
 use super::cat;
+use lazy_static::lazy_static;
 
 #[derive(BotCommands, Clone)]
 #[command(
     rename_rule = "lowercase",
     description = "These commands are supported:"
 )]
+
 enum Command {
     #[command(description = "display this text.")]
     Help,
@@ -17,6 +19,11 @@ enum Command {
     #[command(description = "return chat id")]
     ChatId,
 }
+
+lazy_static! {
+    pub static ref MEDIA_GROUP_RESOURCE: Arc<Mutex<HashMap<String, Vec<String>>>> = Arc::new(Mutex::new(HashMap::new()));
+}
+
 
 async fn handle_commands(b: Bot, msg: Message, cmd: Command) -> ResponseResult<()> {
     match cmd {
@@ -40,6 +47,11 @@ pub async fn start_bot(core_config: CoreConfig) {
 
     let bot = Bot::new(core_config.bot_token);
 
+    // Put config
+    let mut download_cache_dir = super::net::CACHE_DIR.lock().await;
+    *download_cache_dir = core_config.cache_dir.clone();
+    drop(download_cache_dir);
+
     let handler = Update::filter_message()
         .branch(
             dptree::entry()
@@ -47,6 +59,7 @@ pub async fn start_bot(core_config: CoreConfig) {
                     !core_config.chat_id.contains(&msg.from().unwrap().id.0)
                 })
                 .endpoint(|msg: Message, bot: Bot| async move {
+                    log::debug!("Unauthorized user: {:?}", msg.from().unwrap().id.0);
                     bot.send_message(
                         msg.chat.id,
                         "You do not have enough cat power to use this bot!",
@@ -58,21 +71,20 @@ pub async fn start_bot(core_config: CoreConfig) {
         .branch(
             dptree::entry()
                 .filter(move |msg: Message| {
-                    let mut flag: bool = false;
                     match &msg.kind {
                         teloxide::types::MessageKind::Common(common) => match &common.media_kind {
                             teloxide::types::MediaKind::Photo(photo) => {
                                 if photo.media_group_id.is_some() {
-                                    flag = true;
+                                    return true
                                 }
                             }
                             _ => (),
                         },
                         _ => (),
                     };
-                    flag
+                    false
                 })
-                .endpoint(|msg: Message, bot: Bot| async move { handle_group_media(msg, bot) }),
+                .endpoint(|msg: Message| async move { handle_group_media(msg).await }),
         )
         .branch(
             dptree::entry()
@@ -82,7 +94,7 @@ pub async fn start_bot(core_config: CoreConfig) {
 
     Dispatcher::builder(bot, handler)
         .default_handler(|upd| async move {
-            log::warn!("Unhandled update: {:?}", upd);
+            log::debug!("Unhandled update: {:?}", upd);
         })
         .error_handler(LoggingErrorHandler::with_custom_text(
             "An error occurred in dispatcher",
@@ -93,7 +105,13 @@ pub async fn start_bot(core_config: CoreConfig) {
         .await;
 }
 
-fn handle_group_media(msg: Message, bot: Bot) -> ResponseResult<()> {
-    println!("{:?}", msg);
+async fn handle_group_media(msg: Message) -> ResponseResult<()> {
+    let mut map = MEDIA_GROUP_RESOURCE.lock().await;
+
+    map.entry(msg.media_group_id().unwrap().to_string())
+        .or_insert_with(Vec::new)
+        .push(msg.photo().unwrap().last().unwrap().file.id.to_string());
+
+    log::debug!("received media group {} with photo {}.", msg.media_group_id().unwrap(), msg.photo().unwrap().first().unwrap().file.id);
     Ok(())
 }

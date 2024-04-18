@@ -16,6 +16,7 @@ pub struct Config {
 pub struct CoreConfig {
     pub bot_token: String,
     pub chat_id: Vec<u64>,
+    pub cache_dir: String,
 }
 
 pub fn read(path: String) -> Result<Config, Box<dyn Error>> {
