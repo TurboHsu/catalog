@@ -21,10 +21,14 @@ pub async fn post_cat(b: Bot, msg: Message) -> ResponseResult<Message> {
                     let file_id = &photo.photo.last().unwrap().file.id;
 
                     super::net::download_file(&b, file_id).await?;
-                    super::net::upload_oss(file_id).await?;
+
+                    // Use hash as id
+                    let target_id = sha256::digest(file_id);
+
+                    super::net::upload_oss(file_id, &target_id).await?;
                     super::net::delete_file(file_id).await?;
-                    
-                    super::metadata::insert_metadata(caption, vec![file_id.clone()]).await?;
+
+                    super::metadata::insert_metadata(caption, vec![target_id]).await?;
                     super::metadata::update_metadata().await?;
 
                     return b
@@ -40,13 +44,19 @@ pub async fn post_cat(b: Bot, msg: Message) -> ResponseResult<Message> {
                     map.remove(&photo.media_group_id.as_ref().unwrap().to_string());
                     drop(map);
 
+                    let mut ids: Vec<String> = Vec::new();
+
                     for file_id in &photos {
                         super::net::download_file(&b, file_id).await?;
-                        super::net::upload_oss(file_id).await?;
+
+                        // Use hash as id
+                        let target_id = sha256::digest(file_id);
+                        super::net::upload_oss(file_id, &target_id).await?;
                         super::net::delete_file(file_id).await?;
+                        ids.push(target_id);
                     }
-                    
-                    super::metadata::insert_metadata(caption, photos.clone()).await?;
+
+                    super::metadata::insert_metadata(caption, ids).await?;
                     super::metadata::update_metadata().await?;
 
                     return b

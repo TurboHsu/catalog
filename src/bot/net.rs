@@ -24,7 +24,7 @@ pub async fn download_file(b: &Bot, file_id: &String) -> Result<(), RequestError
     Ok(())
 }
 
-pub async fn upload_oss(file_id: &String) -> Result<(), RequestError> {
+pub async fn upload_oss(source_id: &String, target_id: &String) -> Result<(), RequestError> {
     let global_cache_dir = CACHE_DIR.lock().await;
     let cache_dir = global_cache_dir.clone();
     drop(global_cache_dir);
@@ -32,8 +32,8 @@ pub async fn upload_oss(file_id: &String) -> Result<(), RequestError> {
     let storage = super::core::STORAGE.lock().await;
     storage
         .upload(
-            &format!("{}/{}.png", cache_dir, file_id),
-            &format!("{}.png", file_id),
+            &format!("{}/{}.png", cache_dir, source_id),
+            &format!("{}.png", target_id),
         )
         .map_err(|e| {
             RequestError::Io(std::io::Error::new(
@@ -41,7 +41,7 @@ pub async fn upload_oss(file_id: &String) -> Result<(), RequestError> {
                 e.to_string(),
             ))
         })?;
-    log::debug!("Uploaded file: {}", file_id);
+    log::debug!("Uploaded file: {}", source_id);
     drop(storage);
 
     Ok(())

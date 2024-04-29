@@ -11,6 +11,7 @@ pub struct Metadata {
 
 #[derive(Serialize, Deserialize)]
 pub struct Field {
+    pub id: String,
     pub caption: String,
     pub cats: Vec<String>,
 }
@@ -50,7 +51,11 @@ pub async fn init_metadata(path: &str) {
 
 pub async fn insert_metadata(caption: &str, cats: Vec<String>) -> Result<(), RequestError>{
     let mut metadata = METADATA.lock().await;
+    
+    let id = sha256::digest(cats.join(";"));
+
     metadata.data.push(Field {
+        id: id,
         caption: caption.to_string(),
         cats,
     });
