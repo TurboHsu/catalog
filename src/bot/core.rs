@@ -25,6 +25,7 @@ lazy_static! {
         Arc::new(Mutex::new(HashMap::new()));
     pub static ref STORAGE: Mutex<Box<dyn storage::file::ObjectStorage>> =
         Mutex::new(Box::new(storage::file::Default::new()));
+    pub static ref CORE_CONFIG: Mutex<CoreConfig> = Mutex::new(CoreConfig::default());
 }
 
 async fn handle_commands(b: Bot, msg: Message, cmd: Command) -> ResponseResult<()> {
@@ -46,6 +47,10 @@ async fn handle_commands(b: Bot, msg: Message, cmd: Command) -> ResponseResult<(
 
 pub async fn start_bot(core_config: CoreConfig, storage: Box<dyn storage::file::ObjectStorage>) {
     log::info!("Starting CatALog bot...");
+
+    let mut core_config_ref = CORE_CONFIG.lock().await;
+    *core_config_ref = core_config.clone();
+    drop(core_config_ref);
 
     let bot = Bot::new(core_config.bot_token);
 

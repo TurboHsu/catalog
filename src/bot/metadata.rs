@@ -6,14 +6,14 @@ use tokio::sync::Mutex;
 
 #[derive(Serialize, Deserialize)]
 pub struct Metadata {
-    pub data: Vec<Field>,
+    pub data: Vec<Cat>,
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct Field {
+pub struct Cat {
     pub id: String,
     pub caption: String,
-    pub cats: Vec<String>,
+    pub image_path: String,
 }
 
 lazy_static! {
@@ -49,15 +49,15 @@ pub async fn init_metadata(path: &str) {
     drop(metadata_path);
 }
 
-pub async fn insert_metadata(caption: &str, cats: Vec<String>) -> Result<(), RequestError>{
+pub async fn insert_metadata(caption: &str, image_path: String) -> Result<(), RequestError>{
     let mut metadata = METADATA.lock().await;
     
-    let id = sha256::digest(cats.join(";"));
+    let id = sha256::digest(image_path.clone());
 
-    metadata.data.push(Field {
+    metadata.data.push(Cat {
         id: id,
         caption: caption.to_string(),
-        cats,
+        image_path: image_path,
     });
     drop(metadata);
     update_metadata().await
